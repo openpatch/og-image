@@ -1,27 +1,38 @@
-
-import { readFileSync } from 'fs';
-import marked from 'marked';
-import { sanitizeHtml } from './sanitizer';
-import { ParsedRequest } from './types';
-const twemoji = require('twemoji');
-const twOptions = { folder: 'svg', ext: '.svg' };
+import { readFileSync } from "fs";
+import marked from "marked";
+import { sanitizeHtml } from "./sanitizer";
+import { ParsedRequest } from "./types";
+const twemoji = require("twemoji");
+const twOptions = { folder: "svg", ext: ".svg" };
 const emojify = (text: string) => twemoji.parse(text, twOptions);
 
-const rglr = readFileSync(`${__dirname}/../_fonts/Inter-Regular.woff2`).toString('base64');
-const bold = readFileSync(`${__dirname}/../_fonts/Inter-Bold.woff2`).toString('base64');
-const mono = readFileSync(`${__dirname}/../_fonts/Vera-Mono.woff2`).toString('base64');
+const rglr = readFileSync(
+  `${__dirname}/../_fonts/Inter-Regular.woff2`
+).toString("base64");
+const bold = readFileSync(`${__dirname}/../_fonts/Inter-Bold.woff2`).toString(
+  "base64"
+);
+const mono = readFileSync(`${__dirname}/../_fonts/Vera-Mono.woff2`).toString(
+  "base64"
+);
+const pattern = readFileSync(`${__dirname}/../_images/pattern.png`).toString(
+  "base64"
+);
 
 function getCss(theme: string, fontSize: string) {
-    let background = 'white';
-    let foreground = 'black';
-    let radial = 'lightgray';
+  let primary = "#006f95";
+  let secondary = "#98ff98";
 
-    if (theme === 'dark') {
-        background = 'black';
-        foreground = 'white';
-        radial = 'dimgray';
-    }
-    return `
+  let background = "white";
+  let foreground = primary;
+  let radial = secondary;
+
+  if (theme === "dark") {
+    background = "#303030";
+    radial = secondary;
+    foreground = "white";
+  }
+  return `
     @font-face {
         font-family: 'Inter';
         font-style:  normal;
@@ -46,7 +57,7 @@ function getCss(theme: string, fontSize: string) {
     body {
         background: ${background};
         background-image: radial-gradient(circle at 25px 25px, ${radial} 2%, transparent 0%), radial-gradient(circle at 75px 75px, ${radial} 2%, transparent 0%);
-        background-size: 100px 100px;
+        background-image: url(data:image/png;base64,${pattern});
         height: 100vh;
         display: flex;
         text-align: center;
@@ -66,6 +77,9 @@ function getCss(theme: string, fontSize: string) {
     }
 
     .logo-wrapper {
+        position: absolute;
+        right: 50px;
+        bottom: 50px;
         display: flex;
         align-items: center;
         align-content: center;
@@ -83,15 +97,29 @@ function getCss(theme: string, fontSize: string) {
         font-size: 100px;
     }
 
-    .spacer {
-        margin: 150px;
-    }
-
     .emoji {
         height: 1em;
         width: 1em;
         margin: 0 .05em 0 .1em;
         vertical-align: -0.1em;
+    }
+
+    .username {
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        left: 50px;
+        bottom: 50px;
+        font-size: 60px;
+        color: ${foreground};
+
+    }
+
+    .username > img {
+        border-radius: 50%;
+        margin-right: 50px;
     }
     
     .heading {
@@ -100,12 +128,26 @@ function getCss(theme: string, fontSize: string) {
         font-style: normal;
         color: ${foreground};
         line-height: 1.8;
+        background-color: ${background};
+        border-top: 2px solid ${primary};
+        border-bottom: 2px solid ${primary};
+        width: 100%;
     }`;
 }
 
 export function getHtml(parsedReq: ParsedRequest) {
-    const { text, theme, md, fontSize, images, widths, heights } = parsedReq;
-    return `<!DOCTYPE html>
+  const {
+    username,
+    avatar,
+    text,
+    theme,
+    md,
+    fontSize,
+    images,
+    widths,
+    heights,
+  } = parsedReq;
+  return `<!DOCTYPE html>
 <html>
     <meta charset="utf-8">
     <title>Generated Image</title>
@@ -114,33 +156,46 @@ export function getHtml(parsedReq: ParsedRequest) {
         ${getCss(theme, fontSize)}
     </style>
     <body>
-        <div>
-            <div class="spacer">
             <div class="logo-wrapper">
-                ${images.map((img, i) =>
-                    getPlusSign(i) + getImage(img, widths[i], heights[i])
-                ).join('')}
+                ${images
+                  .map(
+                    (img, i) =>
+                      getPlusSign(i) + getImage(img, widths[i], heights[i])
+                  )
+                  .join("")}
             </div>
-            <div class="spacer">
             <div class="heading">${emojify(
-                md ? marked(text) : sanitizeHtml(text)
+              md ? marked(text) : sanitizeHtml(text)
             )}
             </div>
-        </div>
+            ${
+              username
+                ? `<div class="username">
+                ${avatar ? getImage(avatar) : "<div></div>"}
+                ${username}</div>`
+                : "<div></div>"
+            }
     </body>
 </html>`;
 }
 
-function getImage(src: string, width ='auto', height = '225') {
-    return `<img
+const base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+function isBase64(str: string): boolean {
+  return base64regex.test(str);
+}
+
+function getImage(src: string, width = "auto", height = "120") {
+  return `<img
         class="logo"
         alt="Generated Image"
-        src="${sanitizeHtml(src)}"
+        src="${
+          isBase64(src) ? `data:image/png;base64, ${src}` : sanitizeHtml(src)
+        }"
         width="${sanitizeHtml(width)}"
         height="${sanitizeHtml(height)}"
-    />`
+    />`;
 }
 
 function getPlusSign(i: number) {
-    return i === 0 ? '' : '<div class="plus">+</div>';
+  return i === 0 ? "" : '<div class="plus">+</div>';
 }

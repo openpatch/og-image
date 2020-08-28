@@ -147,71 +147,10 @@ const markdownOptions: DropdownOption[] = [
   { text: "Markdown", value: "1" },
 ];
 
-const imageLightOptions: DropdownOption[] = [
-  {
-    text: "Vercel",
-    value:
-      "https://assets.vercel.com/image/upload/front/assets/design/vercel-triangle-black.svg",
-  },
-  {
-    text: "Next.js",
-    value:
-      "https://assets.vercel.com/image/upload/front/assets/design/nextjs-black-logo.svg",
-  },
-  {
-    text: "Hyper",
-    value:
-      "https://assets.vercel.com/image/upload/front/assets/design/hyper-color-logo.svg",
-  },
-];
-
-const imageDarkOptions: DropdownOption[] = [
-  {
-    text: "Vercel",
-    value:
-      "https://assets.vercel.com/image/upload/front/assets/design/vercel-triangle-white.svg",
-  },
-  {
-    text: "Next.js",
-    value:
-      "https://assets.vercel.com/image/upload/front/assets/design/nextjs-white-logo.svg",
-  },
-  {
-    text: "Hyper",
-    value:
-      "https://assets.vercel.com/image/upload/front/assets/design/hyper-bw-logo.svg",
-  },
-];
-
-const widthOptions = [
-  { text: "width", value: "auto" },
-  { text: "50", value: "50" },
-  { text: "100", value: "100" },
-  { text: "150", value: "150" },
-  { text: "200", value: "200" },
-  { text: "250", value: "250" },
-  { text: "300", value: "300" },
-  { text: "350", value: "350" },
-];
-
-const heightOptions = [
-  { text: "height", value: "auto" },
-  { text: "50", value: "50" },
-  { text: "100", value: "100" },
-  { text: "150", value: "150" },
-  { text: "200", value: "200" },
-  { text: "250", value: "250" },
-  { text: "300", value: "300" },
-  { text: "350", value: "350" },
-];
-
 interface AppState extends ParsedRequest {
   loading: boolean;
   showToast: boolean;
   messageToast: string;
-  selectedImageIndex: number;
-  widths: string[];
-  heights: string[];
   overrideUrl: URL | null;
 }
 
@@ -236,17 +175,14 @@ const App = (_: any, state: AppState, setState: SetState) => {
     md = true,
     text = "**Hello** World",
     username = null,
-    images = [imageLightOptions[0].value],
-    widths = [],
-    heights = [],
+    avatar = null,
+    images = [],
     showToast = false,
     messageToast = "",
     loading = true,
-    selectedImageIndex = 0,
     overrideUrl = null,
   } = state;
   const mdValue = md ? "1" : "0";
-  const imageOptions = theme === "light" ? imageLightOptions : imageDarkOptions;
   const url = new URL(window.location.origin);
   url.pathname = `${encodeURIComponent(text)}.${fileType}`;
   url.searchParams.append("theme", theme);
@@ -255,14 +191,11 @@ const App = (_: any, state: AppState, setState: SetState) => {
   if (username) {
     url.searchParams.append("username", username);
   }
+  if (avatar) {
+    url.searchParams.append("avatar", avatar);
+  }
   for (let image of images) {
     url.searchParams.append("images", image);
-  }
-  for (let width of widths) {
-    url.searchParams.append("widths", width);
-  }
-  for (let height of heights) {
-    url.searchParams.append("heights", height);
   }
 
   return H(
@@ -279,11 +212,7 @@ const App = (_: any, state: AppState, setState: SetState) => {
             options: themeOptions,
             value: theme,
             onchange: (val: Theme) => {
-              const options =
-                val === "light" ? imageLightOptions : imageDarkOptions;
-              let clone = [...images];
-              clone[0] = options[selectedImageIndex].value;
-              setLoadingState({ theme: val, images: clone });
+              setLoadingState({ theme: val });
             },
           }),
         }),
@@ -332,85 +261,34 @@ const App = (_: any, state: AppState, setState: SetState) => {
           }),
         }),
         H(Field, {
-          label: "Image 1",
+          label: "Avatar",
           input: H(
             "div",
-            H(Dropdown, {
-              options: imageOptions,
-              value: imageOptions[selectedImageIndex].value,
-              onchange: (val: string) => {
-                let clone = [...images];
-                clone[0] = val;
-                const selected = imageOptions.map((o) => o.value).indexOf(val);
-                setLoadingState({
-                  images: clone,
-                  selectedImageIndex: selected,
-                });
-              },
-            }),
             H(
               "div",
               { className: "field-flex" },
-              H(Dropdown, {
-                options: widthOptions,
-                value: widths[0],
-                small: true,
-                onchange: (val: string) => {
-                  let clone = [...widths];
-                  clone[0] = val;
-                  setLoadingState({ widths: clone });
-                },
-              }),
-              H(Dropdown, {
-                options: heightOptions,
-                value: heights[0],
-                small: true,
-                onchange: (val: string) => {
-                  let clone = [...heights];
-                  clone[0] = val;
-                  setLoadingState({ heights: clone });
+              H(TextInput, {
+                value: avatar,
+                oninput: (val: string) => {
+                  setLoadingState({ avatar: val, overrideUrl: url });
                 },
               })
             )
           ),
         }),
-        ...images.slice(1).map((image, i) =>
+        ...images.map((image, i) =>
           H(Field, {
-            label: `Image ${i + 2}`,
+            label: `Image ${i + 1}`,
             input: H(
               "div",
               H(TextInput, {
                 value: image,
                 oninput: (val: string) => {
                   let clone = [...images];
-                  clone[i + 1] = val;
+                  clone[i] = val;
                   setLoadingState({ images: clone, overrideUrl: url });
                 },
-              }),
-              H(
-                "div",
-                { className: "field-flex" },
-                H(Dropdown, {
-                  options: widthOptions,
-                  value: widths[i + 1],
-                  small: true,
-                  onchange: (val: string) => {
-                    let clone = [...widths];
-                    clone[i + 1] = val;
-                    setLoadingState({ widths: clone });
-                  },
-                }),
-                H(Dropdown, {
-                  options: heightOptions,
-                  value: heights[i + 1],
-                  small: true,
-                  onchange: (val: string) => {
-                    let clone = [...heights];
-                    clone[i + 1] = val;
-                    setLoadingState({ heights: clone });
-                  },
-                })
-              )
+              })
             ),
           })
         ),
@@ -420,9 +298,7 @@ const App = (_: any, state: AppState, setState: SetState) => {
             label: `Add Image ${images.length + 1}`,
             onclick: () => {
               const nextImage =
-                images.length === 1
-                  ? "https://cdn.jsdelivr.net/gh/remojansen/logo.ts@master/ts.svg"
-                  : "";
+                "https://cdn.jsdelivr.net/gh/remojansen/logo.ts@master/ts.svg";
               setLoadingState({ images: [...images, nextImage] });
             },
           }),
